@@ -56,16 +56,32 @@
                 this.type = type;
                 this.movementDirection = Math.random() > 0.5 ? 1 : -1;
                 this.touched = false;
+
+                // Properties for falling animation for the platforms of type disappearing
+                this.isFalling = false;
+                this.fallSpeed = 0;
             }
 
             update(speed) {
-                if (this.type === Platform.TYPES.MOVING) {
+                if (this.type === Platform.TYPES.MOVING && !this.isFalling) {
                     this.x += speed * this.movementDirection;
 
                     // Reverse direction at screen edges
                     if (this.x <= 0 || this.x + this.width >= 320) {
                         this.movementDirection *= -1;
                     }
+                }
+
+                // Handle falling for disappearing platforms
+                if (this.isFalling) {
+                    this.fallSpeed += 0.5;  // Add to the fall speed a fall acceleration static value of 0.5
+                    this.y += this.fallSpeed;
+                }
+            }
+
+            startFalling() {
+                if (this.type === Platform.TYPES.DISAPPEARING) {
+                    this.isFalling = true;
                 }
             }
         }
@@ -174,12 +190,11 @@
                                 if (!platform.touched) {
                                     this._Jump();
                                     platform.touched = true;
-                                    isOnPlatform = true;
+                                    platform.startFalling();
                                 }
                                 break;
                             default:
                                 this._Jump();
-                                isOnPlatform = true;
                                 break;
                         }
                         
@@ -187,9 +202,9 @@
                     }
                 }
 
-                // Remove touched disappearing platforms
+                // Remove platforms that are completely off-screen
                 this._platforms = this._platforms.filter(platform => 
-                    platform.type !== Platform.TYPES.DISAPPEARING || !platform.touched
+                    platform.y < Model.CANVAS_HEIGHT + 50 // Allow some extra space below the screen
                 );
 
                 // Scroll platforms and generate new ones
