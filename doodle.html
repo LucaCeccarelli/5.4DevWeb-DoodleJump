@@ -95,6 +95,12 @@
             static CANVAS_HEIGHT = 480;
 
             constructor() {
+                // TODO : The hitbox size is the same size given when 'Drawing' the sprite
+                this._hitbox = {
+                    width: 50,
+                    height: 50
+                };
+                
                 this._direction = 0;
                 this._gravitySpeed = 0;
                 this._position = { x: Model.CANVAS_WIDTH / 2 - 25, y: Model.CANVAS_HEIGHT / 2 };
@@ -103,12 +109,6 @@
                 this._level = 1;
                 this._gameOver = false;
                 this._highestReachedY = this._position.y;
-
-                // TODO : The hitbox size is the same size given when 'Drawing' the sprite
-                this._hitbox = {
-                    width: 50,
-                    height: 50
-                };
             }
 
             get position() { return this._position; }
@@ -147,12 +147,25 @@
                 const platformCount = 10;
                 const verticalSpacing = Model.CANVAS_HEIGHT / platformCount;
 
+                 // Create platforms with a focus on initial player placement
                 for (let i = 0; i < platformCount; i++) {
-                    platforms.push(new Platform(
-                        Math.random() * (Model.CANVAS_WIDTH - 60),
-                        Model.CANVAS_HEIGHT - i * verticalSpacing,
+                    const platformX = Math.random() * (Model.CANVAS_WIDTH - 60);
+                    const platformY = Model.CANVAS_HEIGHT - i * verticalSpacing;
+
+                    const platform = new Platform(
+                        platformX,
+                        platformY,
                         this._generatePlatformType(this._level)
-                    ));
+                    );
+
+                    // Ensure the player's initial position is on a platform
+                    if (i === Math.floor(platformCount / 2)) {
+                        // Place the platform exactly where the player will spawn
+                        this._position.x = platformX + (platform.width / 2) - (this._hitbox.width / 2);
+                        this._position.y = platformY - this._hitbox.height;
+                    }
+
+                    platforms.push(platform);
                 }
                 return platforms;
             }
