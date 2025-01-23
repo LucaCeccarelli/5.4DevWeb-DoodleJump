@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doodle Jump Amélioré</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        #game-container {
+            position: relative;
+        }
+        #score, #level {
+            position: absolute;
+            top: 10px;
+            font-size: 18px;
+            color: #333;
+        }
+        #score { left: 10px; }
+        #level { right: 10px; }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="score">Score: 0</div>
+        <div id="level">Level: 1</div>
+        <canvas id="my_canvas" width="320" height="480" style="border: 2px solid black; background-color: white;"></canvas>
+    </div>
+
+    <script>
+        class Platform {
+            static TYPES = {
+                NORMAL: 'normal',
+                MOVING: 'moving',
+                DISAPPEARING: 'disappearing'
+            };
+
+            static SPRITE_COORDS = {
+                [Platform.TYPES.NORMAL]: [1, 1, 57, 15],
+                [Platform.TYPES.MOVING]: [1, 19, 57, 15],
+                [Platform.TYPES.DISAPPEARING]: [1, 55, 57, 15]
+            };
+
+            constructor(x, y, type = Platform.TYPES.NORMAL) {
+                this.x = x;
+                this.y = y;
+                this.width = 57; // Match spritesheet width
+                this.height = 15; // Match spritesheet height
+                this.type = type;
+                this.movementDirection = Math.random() > 0.5 ? 1 : -1;
+                this.touched = false;
+            }
+
+            update(speed) {
+                if (this.type === Platform.TYPES.MOVING) {
+                    this.x += speed * this.movementDirection;
+
+                    // Reverse direction at screen edges
+                    if (this.x <= 0 || this.x + this.width >= 320) {
+                        this.movementDirection *= -1;
+                    }
+                }
+            }
+        }
+
+        class Model {
+            static GRAVITY = 20;
+            static JUMP_FORCE = 600;
+            static SPEED = 200;
+            static PLATFORM_SPEED = 100;
+            static CANVAS_WIDTH = 320;
+            static CANVAS_HEIGHT = 480;
+
+            constructor() {
+                this._direction = 0;
+                this._gravitySpeed = 0;
+                this._position = { x: Model.CANVAS_WIDTH / 2 - 25, y: Model.CANVAS_HEIGHT / 2 };
+                this._platforms = this._generateInitialPlatforms();
+                this._score = 0;
+                this._level = 1;
+                this._gameOver = false;
+                this._highestReachedY = this._position.y;
+
+                // TODO : The hitbox size is the same size given when 'Drawing' the sprite
+                this._hitbox = {
+                    width: 50,
+                    height: 50
+                };
+            }
+
+            get position() { return this._position; }
+            get platforms() { return this._platforms; }
+            get score() { return this._score; }
+            get level() { return this._level; }
+            get gameOver() { return this._gameOver; }
+
+            get direction() { return this._direction; }
+            set direction(value) { this._direction = value; }
+
+            BindDisplay(callback) {
+                this.b_Display = callback;
+            }
+
+            _generatePlatformType(level) {
+                const random = Math.random();
+                
+                // Progression de la probabilité des types de plateformes
+                if (level <= 3) return Platform.TYPES.NORMAL;
+                
+                if (level <= 6) {
+                    if (random < 0.7) return Platform.TYPES.NORMAL;
+                    if (random < 0.9) return Platform.TYPES.MOVING;
+                    return Platform.TYPES.DISAPPEARING;
+                }
+                
+                // Niveaux supérieurs : plus de variété
+                if (random < 0.5) return Platform.TYPES.NORMAL;
+                if (random < 0.8) return Platform.TYPES.MOVING;
+                return Platform.TYPES.DISAPPEARING;
+            }
+
+            _generateInitialPlatforms() {
+                const platforms = [];
+                const platformCount = 10;
+                const verticalSpacing = Model.CANVAS_HEIGHT / platformCount;
+
+                for (let i = 0; i < platformCount; i++) {
+                    platforms.push(new Platform(
+                        Math.random() * (Model.CANVAS_WIDTH - 60),
+                        Model.CANVAS_HEIGHT - i * verticalSpacing,
+                        this._generatePlatformType(this._level)
+                    ));
+                }
+                return platforms;
+            }
+
+            Move(fps) {
+                // Horizontal movement
+                this._position.x += this._direction * Model.SPEED / fps;
+
+                // Wrap around screen
+                if (this._position.x < -10) this._position.x = Model.CANVAS_WIDTH;
+                if (this._position.x > Model.CANVAS_WIDTH) this._position.x = -10;
+
+                // Apply gravity
+                this._gravitySpeed += Model.GRAVITY;
+                this._position.y += this._gravitySpeed / fps;
+
+                // Update platform movements based on level
+                this._platforms.forEach(platform => 
+                    platform.update(Model.PLATFORM_SPEED / fps * (this._level / 2))
+                );
+
+                // Check platform collisions
+                let isOnPlatform = false;
+                for (let platform of this._platforms) {
+                    if (
+                        this._position.x + this._hitbox.width > platform.x &&
+                        this._position.x < platform.x + platform.width &&
+                        this._position.y + this._hitbox.height >= platform.y &&
+                        this._position.y + this._hitbox.height < platform.y + 10 &&
+                        this._gravitySpeed > 0
+                    ) {
+                        // Different behavior for different platform types
+                        switch(platform.type) {
+                            case Platform.TYPES.DISAPPEARING:
+                                if (!platform.touched) {
+                                    this._Jump();
+                                    platform.touched = true;
+                                    isOnPlatform = true;
+                                }
+                                break;
+                            default:
+                                this._Jump();
+                                isOnPlatform = true;
+                                break;
+                        }
+                        
+                        break;
+                    }
+                }
+
+                // Remove touched disappearing platforms
+                this._platforms = this._platforms.filter(platform => 
+                    platform.type !== Platform.TYPES.DISAPPEARING || !platform.touched
+                );
+
+                // Scroll platforms and generate new ones
+                if (this._position.y < Model.CANVAS_HEIGHT / 2) {
+                    const scrollAmount = Model.CANVAS_HEIGHT / 2 - this._position.y;
+                    this._position.y += scrollAmount;
+
+                    for (let platform of this._platforms) {
+                        platform.y += scrollAmount;
+                    }
+
+                    // Increase score and potentially level
+                    const scoreIncrease = Math.floor(scrollAmount);
+                    this._score += scoreIncrease;
+                    this._level = Math.floor(this._score / 1000) + 1;
+
+                    // Remove off-screen platforms and add new ones
+                    this._platforms = this._platforms.filter(p => p.y < Model.CANVAS_HEIGHT);
+                    while (this._platforms.length < 10) {
+                        // Important modification: use CURRENT level when generating new platforms
+                        this._platforms.push(new Platform(
+                            Math.random() * (Model.CANVAS_WIDTH - 60),
+                            -50,
+                            this._generatePlatformType(this._level)
+                        ));
+                    }
+                }
+
+                // Game over if fallen below screen
+                if (this._position.y > Model.CANVAS_HEIGHT) {
+                    this._gameOver = true;
+                }
+
+                this.b_Display(this);
+            }
+
+            _Jump() {
+                this._gravitySpeed = -Model.JUMP_FORCE;
+            }
+        }
+
+        class View {
+            constructor() {
+                this._canvas = document.getElementById('my_canvas');
+                this.ctx = this._canvas.getContext('2d');
+                this._scoreElement = document.getElementById('score');
+                this._levelElement = document.getElementById('level');
+                
+                // Image loading
+                this._backgroundImage = new Image();
+                this._backgroundImage.src = './sprites/bck@2x.png';
+                
+                // Doodle sprites
+                this._doodleLeftSprite = new Image();
+                this._doodleLeftSprite.src = './sprites/lik-left@2x.png';
+                
+                this._doodleRightSprite = new Image();
+                this._doodleRightSprite.src = './sprites/lik-right@2x.png';
+                
+                // Platform spritesheet
+                this._platformSpritesheet = new Image();
+                this._platformSpritesheet.src = './sprites/game-tiles.png';
+
+                // Current sprite direction , different from direction because its for the view
+                this._currentDirection = 0;
+                this._hold_right = false;
+                this._hold_left = false;
+
+                this.Events();
+            }
+
+            BindSetDirection(callback) {
+                this.b_SetDirection = callback;
+            }
+
+            Events() {
+                document.addEventListener('keydown', (evt) => {                
+                    if (evt.key == 'ArrowLeft' || evt.key == 'ArrowRight') {
+                        switch (evt.key) {
+                            case 'ArrowLeft':
+                                this._hold_left = true;
+                                this.b_SetDirection(-1);
+                                this._currentDirection = -1;
+                                break;
+                            case 'ArrowRight':
+                                this._hold_right = true;
+                                this.b_SetDirection(1);
+                                this._currentDirection = 1;
+                                break;
+                        }
+                    }
+                });
+
+                document.addEventListener('keyup', (evt) => {
+                    switch (evt.key) {
+                        case 'ArrowLeft':
+                            if (!this._hold_right) {
+                                this.b_SetDirection(0);
+                            }
+                            this._hold_left = false;
+                            break;
+                        case 'ArrowRight':
+                            if (!this._hold_left) {
+                                this.b_SetDirection(0);
+                            }
+                            this._hold_right = false;
+                            break;
+                    }
+                });
+            }
+
+            Display(model) {
+                let { position, platforms, score, level, gameOver } = model;
+                
+                this.ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
+
+                // Draw background image
+                if (this._backgroundImage.complete) {
+                    // Scale image to fit canvas if needed
+                    this.ctx.drawImage(
+                        this._backgroundImage, 
+                        0, 
+                        0, 
+                        this._canvas.width, 
+                        this._canvas.height
+                    );
+                }
+
+                // Update score and level
+                this._scoreElement.textContent = `Score: ${score}`;
+                this._levelElement.textContent = `Level: ${level}`;
+
+                // Draw platforms using sprites
+                for (let platform of platforms) {
+                    // Only draw if spritesheet is loaded
+                    if (this._platformSpritesheet.complete) {
+                        // Get sprite coordinates for this platform type
+                        const coords = Platform.SPRITE_COORDS[platform.type];
+                        
+                        this.ctx.drawImage(
+                            this._platformSpritesheet,  // Spritesheet image
+                            coords[0],  // Source X
+                            coords[1],  // Source Y
+                            coords[2],  // Source width
+                            coords[3],  // Source height
+                            platform.x,  // Destination X
+                            platform.y,  // Destination Y
+                            platform.width,  // Destination width
+                            platform.height  // Destination height
+                        );
+                    } else {
+                        // Fallback to colored rectangle if sprite not loaded
+                        this.ctx.fillStyle = 'green';
+                        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
+                    }
+                }
+
+                // Draw player sprite based on direction
+                let currentSprite;
+                if (this._currentDirection < 0) {
+                    currentSprite = this._doodleLeftSprite;
+                } else if (this._currentDirection > 0) {
+                    currentSprite = this._doodleRightSprite;
+                } else {
+                    // Use right-facing sprite as default when not moving
+                    currentSprite = this._doodleRightSprite;
+                }
+
+                // Draw sprite if loaded
+                if (currentSprite.complete) {
+                    this.ctx.drawImage(
+                        currentSprite, 
+                        position.x, 
+                        position.y, 
+                        50,  // Adjust width as needed
+                        50   // Adjust height as needed
+                    );
+                }
+                // End Draw Player
+
+                // Game over screen
+                if (gameOver) {
+                    this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    this.ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
+                    
+                    //this.ctx.fillStyle = 'white';
+                    this.ctx.font = '30px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('Game Over', this._canvas.width / 2, this._canvas.height / 2);
+                    this.ctx.font = '20px Arial';
+                    this.ctx.fillText(`Score: ${score}`, this._canvas.width / 2, this._canvas.height / 2 + 40);
+                    this.ctx.fillText(`Level: ${level}`, this._canvas.width / 2, this._canvas.height / 2 + 70);
+                }
+            }
+        }
+
+        class Controller {
+            constructor(model, view) {
+                this._model = model;
+                this._view = view;
+                
+                this._startTime = Date.now();
+                this._lag = 0;
+                this._fps = 60;
+                this._frameDuration = 1000 / this._fps;
+
+                this._model.BindDisplay(this.Display.bind(this));
+                this._view.BindSetDirection(this.SetDirection.bind(this));
+            }
+
+            Display(model) {
+                this._view.Display(model);
+            }
+
+            SetDirection(newDirection) {
+                this._model.direction = newDirection;
+            }
+            
+            Update() {
+                let currentTime = Date.now();
+                let deltaTime = currentTime - this._startTime;
+                
+                this._lag += deltaTime;
+                this._startTime = currentTime;
+
+                while (this._lag >= this._frameDuration) {
+                    if (!this._model.gameOver) {
+                        this._model.Move(this._fps);
+                    }
+                    this._lag -= this._frameDuration;
+                }
+                
+                requestAnimationFrame(this.Update.bind(this));
+            }
+        }
+
+        const app = new Controller(new Model(), new View());
+        app.Update();
+    </script>
+</body>
+</html>
