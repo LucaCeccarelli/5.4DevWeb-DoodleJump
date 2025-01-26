@@ -35,6 +35,16 @@
     </div>
 
     <script>
+        class FinishLine {
+            // start at 579, 330
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.width = 321;  
+                this.height = 182;
+            }
+        }
+
         class Platform {
             static TYPES = {
                 NORMAL: 'normal',
@@ -107,8 +117,15 @@
                 this._score = 0;
                 this._level = 1;
                 this._platforms = this._generateInitialPlatforms();
+
+                const finishLineY = -10800;
+                const finishLineX = 0;
+
+                this._finishLine = new FinishLine(finishLineX, finishLineY);
+
                 this._generatePlatformsSmartly();
                 this._gameOver = false;
+                this._gameWon = false;
                 this._highestReachedY = this._position.y;
             }
 
@@ -117,6 +134,7 @@
             get score() { return this._score; }
             get level() { return this._level; }
             get gameOver() { return this._gameOver; }
+            get gameWon() { return this._gameWon; }
 
             get direction() { return this._direction; }
             set direction(value) { this._direction = value; }
@@ -334,12 +352,24 @@
                         platform.y += scrollAmount;
                     }
 
+                    // Scroll the finish line
+                    if (this._finishLine) {
+                        this._finishLine.y += scrollAmount;
+                    }
+
                     // Increase score and potentially level
                     const scoreIncrease = Math.floor(scrollAmount);
                     this._score += scoreIncrease;
                     this._level = Math.floor(this._score / 1000) + 1;
 
-                    this._generatePlatformsSmartly();
+                    // Only generate more platforms if the player didnt yet won
+                    // And a margin of 200 to prevent to generate platforms above the finish line
+                    if (this._score < 9800) {
+                        this._generatePlatformsSmartly();
+                    } else if (this._score >= 10000){
+                        // As soon as we cross 10000, mark the game as won
+                        this._gameWon = true;
+                    }
                 }
 
                 // Game over if fallen below screen
@@ -376,6 +406,10 @@
                 // Platform spritesheet
                 this._platformSpritesheet = new Image();
                 this._platformSpritesheet.src = './sprites/game-tiles.png';
+
+                // Finish line sprite
+                this._finishLineSprite = new Image();
+                this._finishLineSprite.src = './sprites/game-tiles.png';
 
                 // Current sprite direction , different from direction because its for the view
                 this._currentDirection = 0;
@@ -494,6 +528,22 @@
                 }
                 // End Draw Player
 
+                // Draw finish line
+                if (model._finishLine && this._finishLineSprite.complete) {
+                    this.ctx.drawImage(
+                        this._finishLineSprite,
+                        579, 
+                        330,
+                        321,
+                        182,
+                        model._finishLine.x,
+                        model._finishLine.y,
+                        model._finishLine.width,   // 321
+                        model._finishLine.height   // 182
+                    );
+                    // start at 579, 330
+                }
+
                 // Game over screen
                 if (gameOver) {
                     this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -506,6 +556,19 @@
                     this.ctx.font = '20px Arial';
                     this.ctx.fillText(`Score: ${score}`, this._canvas.width / 2, this._canvas.height / 2 + 40);
                     this.ctx.fillText(`Level: ${level}`, this._canvas.width / 2, this._canvas.height / 2 + 70);
+                }
+                // Game won screen
+                if (model.gameWon) {
+                    this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
+                    this.ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
+
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.font = '30px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('You Win!', this._canvas.width / 2, this._canvas.height / 2);
+
+                    this.ctx.font = '20px Arial';
+                    this.ctx.fillText(`Score: ${score}`, this._canvas.width / 2, this._canvas.height / 2 + 40);
                 }
             }
         }
@@ -540,7 +603,8 @@
                 this._startTime = currentTime;
 
                 while (this._lag >= this._frameDuration) {
-                    if (!this._model.gameOver) {
+                    // Once the game is either over or won the game stops moving
+                    if (!this._model.gameOver && !this._model.gameWon) {
                         this._model.Move(this._fps);
                     }
                     this._lag -= this._frameDuration;
