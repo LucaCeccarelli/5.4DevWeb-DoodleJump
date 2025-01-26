@@ -217,8 +217,18 @@
                     const randomJitter = Math.random() * 0.1; // up to +10% wiggle
                     const totalFraction = Math.min(1.0, fractionOfMaxSpacing + randomJitter);
 
-                    const newPlatformY = minY + totalFraction * (maxY - minY);
+                    let newPlatformY = minY + totalFraction * (maxY - minY);
                     const newPlatformX = this._calculateViableXPosition(newPlatformY);
+                    
+                    // Code to fix the initial cluster of platforms 
+                    //    ensure at least 70px above old highest
+                    //    i.e., old highestPlatform.y - newPlatformY >= 70
+                    //    => newPlatformY <= highestPlatform.y - 70
+                    const forcedGap = 40;
+                    const desiredY = highestPlatform.y - forcedGap;
+                    if (newPlatformY > desiredY) {
+                        newPlatformY = desiredY;
+                    }
 
                     // TODO : Retrieve platform width and height directly or keep it as a static value ? 
                     const width = 57;
