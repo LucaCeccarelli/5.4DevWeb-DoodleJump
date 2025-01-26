@@ -1,0 +1,30 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+  }
+  
+  #game-container {
+    position: relative;
+  }
+  
+  #score,
+  #level {
+    position: absolute;
+    top: 10px;
+    font-size: 18px;
+    color: #333;
+  }
+  
+  #score {
+    left: 10px;
+  }
+  
+  #level {
+    right: 10px;
+  }
+  
