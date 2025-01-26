@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Doodle Jump Amélioré</title>
+    <title>Doodle Jump</title>
     <style>
         body {
             display: flex;
@@ -104,6 +104,9 @@
             static CANVAS_WIDTH = 320;
             static CANVAS_HEIGHT = 480;
 
+            static MAX_JUMP_HEIGHT = Model.JUMP_FORCE / Model.GRAVITY;
+            static MIN_PLATFORM_SPACING = 100;
+
             constructor() {
                 // TODO : The hitbox size is the same size given when 'Drawing' the sprite
                 this._hitbox = {
@@ -116,14 +119,14 @@
                 this._position = { x: Model.CANVAS_WIDTH / 2 - 25, y: Model.CANVAS_HEIGHT / 2 };
                 this._score = 0;
                 this._level = 1;
-                this._platforms = this._generateInitialPlatforms();
+                this._platforms = this._generateInitialPlatform();
 
                 const finishLineY = -10800;
                 const finishLineX = 0;
 
                 this._finishLine = new FinishLine(finishLineX, finishLineY);
 
-                this._generatePlatformsSmartly();
+                this._generatePlatforms();
                 this._gameOver = false;
                 this._gameWon = false;
                 this._highestReachedY = this._position.y;
@@ -146,16 +149,14 @@
             _generatePlatformType(level) {
                 const random = Math.random();
                 
-                // Progression de la probabilité des types de plateformes
                 if (level <= 3) return Platform.TYPES.NORMAL;
                 
-                if (level <= 6) {
+                if (level <= 5) {
                     if (random < 0.7) return Platform.TYPES.NORMAL;
                     if (random < 0.9) return Platform.TYPES.MOVING;
                     return Platform.TYPES.DISAPPEARING;
                 }
                 
-                // Niveaux supérieurs : plus de variété
                 if (random < 0.5) return Platform.TYPES.NORMAL;
                 if (random < 0.8) return Platform.TYPES.MOVING;
                 return Platform.TYPES.DISAPPEARING;
@@ -164,10 +165,8 @@
             _getTargetPlatformCount() {
                 // Desired platforms at level 1 and level 10
                 const maxPlatformsAtLevel1 = 10;
-                const minPlatformsAtLevel10 = 4;
+                const minPlatformsAtLevel10 = 5;
 
-                // Linear interpolation from 15 down to 5
-                // level 1 => 15, level 10 => 5
                 const t = (this._level - 1) / (10 - 1);  // Goes from 0.0 (level 1) to 1.0 (level 10)
                 const desired = maxPlatformsAtLevel1 - t * (maxPlatformsAtLevel1 - minPlatformsAtLevel10);
 
@@ -176,21 +175,17 @@
 
             _platformConflicts(x, y, width, height, newType) {
                 for (let p of this._platforms) {
-                    // 1) Check normal bounding-box overlap in X & Y
-                    //    (only if we truly want to forbid *any* overlap in both dimensions)
+
                     const overlapX = (x < p.x + p.width) && (x + width > p.x);
                     const overlapY = (y < p.y + p.height) && (y + height > p.y);
 
                     if (overlapX && overlapY) {
-                        // Already physically overlapping => conflict
                         return true;
                     }
 
-                    // 2) If the new platform is moving, or this existing one is moving,
-                    //    forbid *any horizontal overlap* (regardless of Y).
                     if (newType === Platform.TYPES.MOVING || p.type === Platform.TYPES.MOVING) {
                         if (overlapX) {
-                            // "Same X level" conflict => we don’t allow it
+                            // "Same X level" conflict => another platform could collide with the moving one
                             return true;
                         }
                     }
@@ -199,7 +194,7 @@
                 return false;
             }
 
-            _generateInitialPlatforms() {
+            _generateInitialPlatform() {
                 const platformX = Model.CANVAS_WIDTH / 2 - 30;
                 const platformY = Model.CANVAS_HEIGHT / 2;
 
@@ -212,13 +207,9 @@
                 return [platform];
             }
 
-            _generatePlatformsSmartly() {
+            _generatePlatforms() {
                 // Remove off-screen platforms
                 this._platforms = this._platforms.filter(p => p.y < Model.CANVAS_HEIGHT);
-
-                // Define jump constraints
-                const MAX_JUMP_HEIGHT = Model.JUMP_FORCE / Model.GRAVITY;
-                const MIN_PLATFORM_SPACING = 100;
 
                 // How many total platforms for the current level
                 const targetCount = this._getTargetPlatformCount();
@@ -231,8 +222,8 @@
                     );
 
                     // These define the feasible Y range
-                    let minY = Math.max(highestPlatform.y - MAX_JUMP_HEIGHT, 15);   // 15 -> platform height
-                    let maxY = highestPlatform.y - MIN_PLATFORM_SPACING;
+                    let minY = Math.max(highestPlatform.y - Model.MAX_JUMP_HEIGHT, 15);   // 15 -> platform height
+                    let maxY = highestPlatform.y - Model.MIN_PLATFORM_SPACING;
 
                     // We'll attempt placing one new platform in a loop
                     let tries = 0;
@@ -241,24 +232,21 @@
                     // Pre-generate type only once (so we don't keep randomizing the type in each try)
                     const platformType = this._generatePlatformType(this._level);
 
-                    // 
-                    // We push the Y position near the "maxY" for bigger jumps.
-                    // fractionOfMaxSpacing goes from 0.5 at level=1 to 1.0 at level=10 (you can tweak!)
-                    //
+                    // We push the Y position near the "maxY" for bigger jumps depending on the current level of the player
+                    //      fractionOfMaxSpacing goes from 0.5 at level=1 to 1.0 at level=10 
                     const fractionOfMaxSpacing = 0.5 + 0.5 * (Math.min(this._level, 10) / 10);
                     // Example results:
                     //   Level=1 => fraction=0.5+0.5*(1/10) = 0.55 (55% of the gap)
                     //   Level=10 => fraction=0.5+0.5*(10/10) = 1.0 (100% of the gap => near maxY)
 
                     while (tries < 50 && !placedPlatform) {
-                        // Force new platform Y to be near the top end of [minY, maxY].
-                        // We'll still add a small random factor, so they’re not all in the exact same spot.
                         const randomJitter = Math.random() * 0.1; // up to +10% wiggle
                         const totalFraction = Math.min(1.0, fractionOfMaxSpacing + randomJitter);
 
                         const newPlatformY = minY + totalFraction * (maxY - minY);
                         const newPlatformX = this._calculateViableXPosition(newPlatformY);
 
+                        // TODO : Retrieve platform width and height directly or keep it as a static value ? 
                         const width = 57;
                         const height = 15;
 
@@ -269,9 +257,6 @@
                             this._platforms.push(placedPlatform);
                         }
                         tries ++;
-                    }
-                    if(tries == 50){
-                        console.log("Lol");
                     }
                 }
             }
@@ -363,9 +348,9 @@
                     this._level = Math.floor(this._score / 1000) + 1;
 
                     // Only generate more platforms if the player didnt yet won
-                    // And a margin of 200 to prevent to generate platforms above the finish line
-                    if (this._score < 9800) {
-                        this._generatePlatformsSmartly();
+                    //      And a margin of 300 to prevent to generate platforms above the finish line
+                    if (this._score < 9700) {
+                        this._generatePlatforms();
                     } else if (this._score >= 10000){
                         // As soon as we cross 10000, mark the game as won
                         this._gameWon = true;
@@ -392,7 +377,7 @@
                 this._scoreElement = document.getElementById('score');
                 this._levelElement = document.getElementById('level');
                 
-                // Image loading
+                // Background loading
                 this._backgroundImage = new Image();
                 this._backgroundImage.src = './sprites/bck@2x.png';
                 
@@ -412,6 +397,7 @@
                 this._finishLineSprite.src = './sprites/game-tiles.png';
 
                 // Current sprite direction , different from direction because its for the view
+                // TODO : Retrieve the direction from the model instead of having a second variable ?
                 this._currentDirection = 0;
                 this._hold_right = false;
                 this._hold_left = false;
@@ -466,7 +452,6 @@
 
                 // Draw background image
                 if (this._backgroundImage.complete) {
-                    // Scale image to fit canvas if needed
                     this.ctx.drawImage(
                         this._backgroundImage, 
                         0, 
@@ -498,11 +483,7 @@
                             platform.width,  // Destination width
                             platform.height  // Destination height
                         );
-                    } else {
-                        // Fallback to colored rectangle if sprite not loaded
-                        this.ctx.fillStyle = 'green';
-                        this.ctx.fillRect(platform.x, platform.y, platform.width, platform.height);
-                    }
+                    } 
                 }
 
                 // Draw player sprite based on direction
@@ -516,7 +497,7 @@
                     currentSprite = this._doodleRightSprite;
                 }
 
-                // Draw sprite if loaded
+                // Draw player sprite if image has loaded
                 if (currentSprite.complete) {
                     this.ctx.drawImage(
                         currentSprite, 
@@ -526,7 +507,6 @@
                         50   // Adjust height as needed
                     );
                 }
-                // End Draw Player
 
                 // Draw finish line
                 if (model._finishLine && this._finishLineSprite.complete) {
@@ -541,7 +521,7 @@
                         model._finishLine.width,   // 321
                         model._finishLine.height   // 182
                     );
-                    // start at 579, 330
+                    // start at 579, 330 in game tiles
                 }
 
                 // Game over screen
@@ -549,7 +529,6 @@
                     this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
                     this.ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
                     
-                    //this.ctx.fillStyle = 'white';
                     this.ctx.font = '30px Arial';
                     this.ctx.textAlign = 'center';
                     this.ctx.fillText('Game Over', this._canvas.width / 2, this._canvas.height / 2);
