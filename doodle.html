@@ -107,6 +107,7 @@
                 this._score = 0;
                 this._level = 1;
                 this._platforms = this._generateInitialPlatforms();
+                this._generatePlatformsSmartly();
                 this._gameOver = false;
                 this._highestReachedY = this._position.y;
             }
@@ -142,32 +143,140 @@
                 return Platform.TYPES.DISAPPEARING;
             }
 
-            _generateInitialPlatforms() {
-                const platforms = [];
-                const platformCount = 10;
-                const verticalSpacing = Model.CANVAS_HEIGHT / platformCount;
+            _getTargetPlatformCount() {
+                // Desired platforms at level 1 and level 10
+                const maxPlatformsAtLevel1 = 10;
+                const minPlatformsAtLevel10 = 3;
 
-                 // Create platforms with a focus on initial player placement
-                for (let i = 0; i < platformCount; i++) {
-                    const platformX = Math.random() * (Model.CANVAS_WIDTH - 60);
-                    const platformY = Model.CANVAS_HEIGHT - i * verticalSpacing;
+                // Linear interpolation from 15 down to 5
+                // level 1 => 15, level 10 => 5
+                const t = (this._level - 1) / (10 - 1);  // Goes from 0.0 (level 1) to 1.0 (level 10)
+                const desired = maxPlatformsAtLevel1 - t * (maxPlatformsAtLevel1 - minPlatformsAtLevel10);
 
-                    const platform = new Platform(
-                        platformX,
-                        platformY,
-                        this._generatePlatformType(this._level)
-                    );
+                return Math.round(desired);
+            }
 
-                    // Ensure the player's initial position is on a platform
-                    if (i === Math.floor(platformCount / 2)) {
-                        // Place the platform exactly where the player will spawn
-                        this._position.x = platformX + (platform.width / 2) - (this._hitbox.width / 2);
-                        this._position.y = platformY - this._hitbox.height;
+            _platformConflicts(x, y, width, height, newType) {
+                for (let p of this._platforms) {
+                    // 1) Check normal bounding-box overlap in X & Y
+                    //    (only if we truly want to forbid *any* overlap in both dimensions)
+                    const overlapX = (x < p.x + p.width) && (x + width > p.x);
+                    const overlapY = (y < p.y + p.height) && (y + height > p.y);
+
+                    if (overlapX && overlapY) {
+                        // Already physically overlapping => conflict
+                        return true;
                     }
 
-                    platforms.push(platform);
+                    // 2) If the new platform is moving, or this existing one is moving,
+                    //    forbid *any horizontal overlap* (regardless of Y).
+                    if (newType === Platform.TYPES.MOVING || p.type === Platform.TYPES.MOVING) {
+                        if (overlapX) {
+                            // "Same X level" conflict => we don’t allow it
+                            return true;
+                        }
+                    }
                 }
-                return platforms;
+                // If we passed all checks, no conflict
+                return false;
+            }
+
+            _generateInitialPlatforms() {
+                const platformX = Model.CANVAS_WIDTH / 2 - 30;
+                const platformY = Model.CANVAS_HEIGHT / 2;
+
+                const platform = new Platform(platformX, platformY, Platform.TYPES.NORMAL);
+
+                // Ensure the player starts on top of that platform so they're safe.
+                this._position.x = platformX + (platform.width / 2) - (this._hitbox.width / 2);
+                this._position.y = platformY - this._hitbox.height;
+
+                return [platform];
+            }
+
+            _generatePlatformsSmartly() {
+                // Remove off-screen platforms
+                this._platforms = this._platforms.filter(p => p.y < Model.CANVAS_HEIGHT);
+
+                // Define jump constraints
+                const MAX_JUMP_HEIGHT = Model.JUMP_FORCE / Model.GRAVITY;
+                const MIN_PLATFORM_SPACING = 100;
+
+                // How many total platforms for the current level
+                const targetCount = this._getTargetPlatformCount();
+
+                // Generate new platforms until we reach target
+                while (this._platforms.length < targetCount) {
+                    // Get highest existing platform
+                    let highestPlatform = this._platforms.reduce((highest, current) =>
+                        current.y < highest.y ? current : highest
+                    );
+
+                    // These define the feasible Y range
+                    let minY = Math.max(highestPlatform.y - MAX_JUMP_HEIGHT, 15);   // 15 -> platform height
+                    let maxY = highestPlatform.y - MIN_PLATFORM_SPACING;
+
+                    // We'll attempt placing one new platform in a loop
+                    let tries = 0;
+                    let placedPlatform = null;
+
+                    // Pre-generate type only once (so we don't keep randomizing the type in each try)
+                    const platformType = this._generatePlatformType(this._level);
+
+                    // 
+                    // We push the Y position near the "maxY" for bigger jumps.
+                    // fractionOfMaxSpacing goes from 0.5 at level=1 to 1.0 at level=10 (you can tweak!)
+                    //
+                    const fractionOfMaxSpacing = 0.5 + 0.5 * (Math.min(this._level, 10) / 10);
+                    // Example results:
+                    //   Level=1 => fraction=0.5+0.5*(1/10) = 0.55 (55% of the gap)
+                    //   Level=10 => fraction=0.5+0.5*(10/10) = 1.0 (100% of the gap => near maxY)
+
+                    while (tries < 50 && !placedPlatform) {
+                        // Force new platform Y to be near the top end of [minY, maxY].
+                        // We'll still add a small random factor, so they’re not all in the exact same spot.
+                        const randomJitter = Math.random() * 0.1; // up to +10% wiggle
+                        const totalFraction = Math.min(1.0, fractionOfMaxSpacing + randomJitter);
+
+                        const newPlatformY = minY + totalFraction * (maxY - minY);
+                        const newPlatformX = this._calculateViableXPosition(newPlatformY);
+
+                        const width = 57;
+                        const height = 15;
+
+                        // Check for conflict
+                        if (!this._platformConflicts(newPlatformX, newPlatformY, width, height, platformType)) {
+                            // If no conflict, create & push
+                            placedPlatform = new Platform(newPlatformX, newPlatformY, platformType);
+                            this._platforms.push(placedPlatform);
+                        }
+                        tries ++;
+                    }
+                    if(tries == 50){
+                        console.log("Lol");
+                    }
+                }
+            }
+
+            _calculateViableXPosition(platformY) {
+                // Strategy: Look at existing platforms and find a position that could be reachable
+                const viablePlatforms = this._platforms.filter(p => 
+                    p.y > platformY && p.y <= platformY + Model.JUMP_FORCE / Model.GRAVITY
+                );
+
+                if (viablePlatforms.length > 0) {
+                    // Choose a platform to base the new platform's X position relative to
+                    const referencePlatform = viablePlatforms[Math.floor(Math.random() * viablePlatforms.length)];
+                    
+                    // Generate X position near the reference platform, with some randomness
+                    const baseX = referencePlatform.x;
+                    const xVariation = Math.random() * 100 - 50;  // +/- 50 pixels variation
+                    
+                    return Math.max(0, Math.min(Model.CANVAS_WIDTH - 60, baseX + xVariation));
+                }
+
+                // Fallback to completely random if no viable platforms found
+                return Math.random() * (Model.CANVAS_WIDTH - 60);
             }
 
             Move(fps) {
@@ -215,10 +324,6 @@
                     }
                 }
 
-                // Remove platforms that are completely off-screen
-                this._platforms = this._platforms.filter(platform => 
-                    platform.y < Model.CANVAS_HEIGHT + 50 // Allow some extra space below the screen
-                );
 
                 // Scroll platforms and generate new ones
                 if (this._position.y < Model.CANVAS_HEIGHT / 2) {
@@ -234,16 +339,7 @@
                     this._score += scoreIncrease;
                     this._level = Math.floor(this._score / 1000) + 1;
 
-                    // Remove off-screen platforms and add new ones
-                    this._platforms = this._platforms.filter(p => p.y < Model.CANVAS_HEIGHT);
-                    while (this._platforms.length < 10) {
-                        // Important modification: use CURRENT level when generating new platforms
-                        this._platforms.push(new Platform(
-                            Math.random() * (Model.CANVAS_WIDTH - 60),
-                            -50,
-                            this._generatePlatformType(this._level)
-                        ));
-                    }
+                    this._generatePlatformsSmartly();
                 }
 
                 // Game over if fallen below screen
