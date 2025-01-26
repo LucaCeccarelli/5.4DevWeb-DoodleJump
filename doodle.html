@@ -90,7 +90,7 @@
             static GRAVITY = 20;
             static JUMP_FORCE = 600;
             static SPEED = 200;
-            static PLATFORM_SPEED = 100;
+            static PLATFORM_SPEED = 200;
             static CANVAS_WIDTH = 320;
             static CANVAS_HEIGHT = 480;
 
@@ -146,7 +146,7 @@
             _getTargetPlatformCount() {
                 // Desired platforms at level 1 and level 10
                 const maxPlatformsAtLevel1 = 10;
-                const minPlatformsAtLevel10 = 3;
+                const minPlatformsAtLevel10 = 4;
 
                 // Linear interpolation from 15 down to 5
                 // level 1 => 15, level 10 => 5
@@ -293,7 +293,7 @@
 
                 // Update platform movements based on level
                 this._platforms.forEach(platform => 
-                    platform.update(Model.PLATFORM_SPEED / fps * (this._level / 2))
+                    platform.update(Model.PLATFORM_SPEED / fps)
                 );
 
                 // Check platform collisions
