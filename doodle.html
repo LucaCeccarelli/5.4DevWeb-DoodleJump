@@ -173,27 +173,6 @@
                 return Math.round(desired);
             }
 
-            _platformConflicts(x, y, width, height, newType) {
-                for (let p of this._platforms) {
-
-                    const overlapX = (x < p.x + p.width) && (x + width > p.x);
-                    const overlapY = (y < p.y + p.height) && (y + height > p.y);
-
-                    if (overlapX && overlapY) {
-                        return true;
-                    }
-
-                    if (newType === Platform.TYPES.MOVING || p.type === Platform.TYPES.MOVING) {
-                        if (overlapX) {
-                            // "Same X level" conflict => another platform could collide with the moving one
-                            return true;
-                        }
-                    }
-                }
-                // If we passed all checks, no conflict
-                return false;
-            }
-
             _generateInitialPlatform() {
                 const platformX = Model.CANVAS_WIDTH / 2 - 30;
                 const platformY = Model.CANVAS_HEIGHT / 2;
@@ -225,10 +204,6 @@
                     let minY = Math.max(highestPlatform.y - Model.MAX_JUMP_HEIGHT, 15);   // 15 -> platform height
                     let maxY = highestPlatform.y - Model.MIN_PLATFORM_SPACING;
 
-                    // We'll attempt placing one new platform in a loop
-                    let tries = 0;
-                    let placedPlatform = null;
-
                     // Pre-generate type only once (so we don't keep randomizing the type in each try)
                     const platformType = this._generatePlatformType(this._level);
 
@@ -239,25 +214,17 @@
                     //   Level=1 => fraction=0.5+0.5*(1/10) = 0.55 (55% of the gap)
                     //   Level=10 => fraction=0.5+0.5*(10/10) = 1.0 (100% of the gap => near maxY)
 
-                    while (tries < 50 && !placedPlatform) {
-                        const randomJitter = Math.random() * 0.1; // up to +10% wiggle
-                        const totalFraction = Math.min(1.0, fractionOfMaxSpacing + randomJitter);
+                    const randomJitter = Math.random() * 0.1; // up to +10% wiggle
+                    const totalFraction = Math.min(1.0, fractionOfMaxSpacing + randomJitter);
 
-                        const newPlatformY = minY + totalFraction * (maxY - minY);
-                        const newPlatformX = this._calculateViableXPosition(newPlatformY);
+                    const newPlatformY = minY + totalFraction * (maxY - minY);
+                    const newPlatformX = this._calculateViableXPosition(newPlatformY);
 
-                        // TODO : Retrieve platform width and height directly or keep it as a static value ? 
-                        const width = 57;
-                        const height = 15;
+                    // TODO : Retrieve platform width and height directly or keep it as a static value ? 
+                    const width = 57;
+                    const height = 15;
 
-                        // Check for conflict
-                        if (!this._platformConflicts(newPlatformX, newPlatformY, width, height, platformType)) {
-                            // If no conflict, create & push
-                            placedPlatform = new Platform(newPlatformX, newPlatformY, platformType);
-                            this._platforms.push(placedPlatform);
-                        }
-                        tries ++;
-                    }
+                    this._platforms.push(new Platform(newPlatformX, newPlatformY, platformType));
                 }
             }
 
