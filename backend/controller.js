@@ -36,6 +36,7 @@ class Controller {
 
     this._model.BindDisplay(this.Display.bind(this));
     this._view.BindSetDirection(this.SetDirection.bind(this));
+    this._view.BindGetDirection(this.GetDirection.bind(this));
 
     const startBtn = document.getElementById('startGameBtn');
     startBtn.addEventListener('click', () => {
@@ -52,6 +53,7 @@ class Controller {
     // Re-bind the display and direction events
     this._model.BindDisplay(this.Display.bind(this));
     this._view.BindSetDirection(this.SetDirection.bind(this));
+    this._view.BindGetDirection(this.GetDirection.bind(this));
 
     // Reset timing
     this._startTime = Date.now();
@@ -64,6 +66,10 @@ class Controller {
 
   SetDirection(newDirection) {
     this._model.direction = newDirection;
+  }
+
+  GetDirection() {
+    return this._model.direction;
   }
 
   Update() {
