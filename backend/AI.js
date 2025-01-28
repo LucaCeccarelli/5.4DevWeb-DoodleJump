@@ -106,4 +106,3 @@ const neuralNetwork = new AI(
   matricePoidsSortie,
   vecteurBiaisSortie
 );
-
