@@ -36,6 +36,10 @@ class View {
     this.b_SetDirection = callback;
   }
 
+  BindGetDirection(callback) {
+    this.b_GetDirection = callback;
+  }
+
   Events() {
     document.addEventListener('keydown', (evt) => {
       if (evt.key == 'ArrowLeft' || evt.key == 'ArrowRight') {
@@ -43,12 +47,10 @@ class View {
           case 'ArrowLeft':
             this._hold_left = true;
             this.b_SetDirection(-1);
-            this._currentDirection = -1;
             break;
           case 'ArrowRight':
             this._hold_right = true;
             this.b_SetDirection(1);
-            this._currentDirection = 1;
             break;
         }
       }
@@ -112,12 +114,11 @@ class View {
 
     // Draw player sprite based on direction
     let currentSprite;
-    if (this._currentDirection < 0) {
+    if (this.b_GetDirection() < 0) {
       currentSprite = this._doodleLeftSprite;
-    } else if (this._currentDirection > 0) {
+    } else if (this.b_GetDirection() > 0) {
       currentSprite = this._doodleRightSprite;
     } else {
-      // Use right-facing sprite as default when not moving
       currentSprite = this._doodleRightSprite;
     }
 

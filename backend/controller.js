@@ -35,8 +35,8 @@ class Controller {
     );
 
     this._model.BindDisplay(this.Display.bind(this));
-    this._model.BindAiState(this.useAi);
     this._view.BindSetDirection(this.SetDirection.bind(this));
+    this._view.BindGetDirection(this.GetDirection.bind(this));
 
     const startBtn = document.getElementById('startGameBtn');
     startBtn.addEventListener('click', () => {
@@ -53,6 +53,7 @@ class Controller {
     // Re-bind the display and direction events
     this._model.BindDisplay(this.Display.bind(this));
     this._view.BindSetDirection(this.SetDirection.bind(this));
+    this._view.BindGetDirection(this.GetDirection.bind(this));
 
     // Reset timing
     this._startTime = Date.now();
@@ -65,6 +66,10 @@ class Controller {
 
   SetDirection(newDirection) {
     this._model.direction = newDirection;
+  }
+
+  GetDirection() {
+    return this._model.direction;
   }
 
   Update() {
@@ -82,7 +87,7 @@ class Controller {
 
         // If AI is active, set direction from an AI routine (example placeholder)
         if (this.useAi) {
-          this.ai._vecteurEntree = this._model.aiInputVector();
+          this.ai.inputVector = this._model.aiInputVector();
           this._model.direction = this.ai.computeOutput();
         }
 
