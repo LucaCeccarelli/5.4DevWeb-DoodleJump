@@ -8,15 +8,41 @@ class Controller {
     this._fps = 60;
     this._frameDuration = 1000 / this._fps;
 
+    this.useAi = false;
+
+    const vecteurBiaisEntree = [0.1, 0.1, 0.1, 0.1];
+
+    const matricePoids = [
+      [0.1, 0.2, 0.5, 0.4, 0.7, 0.7],
+      [0.1, 0.4, 0.5, 0.4, 0.7, 0.7],
+      [-0.2, -0.2, -0.5, -0.4, -0.7, 0.7],
+      [0.1, 0.4, 0.8, 0.4, 0.4, 0.4],
+    ];
+
+    const matricePoidsSortie = [
+      [0.1, 0.2, 0.5, 0.4],
+      [0.1, 0.4, 0.5, 0.4],
+      [0.2, 0.2, 0.5, 0.4],
+    ];
+
+    const vecteurBiaisSortie = [0.1, 0.1, 0.1];
+
+    this.ai = new AI(
+      vecteurBiaisEntree,
+      matricePoids,
+      matricePoidsSortie,
+      vecteurBiaisSortie
+    );
+
     this._model.BindDisplay(this.Display.bind(this));
+    this._model.BindAiState(this.useAi);
     this._view.BindSetDirection(this.SetDirection.bind(this));
 
     const startBtn = document.getElementById('startGameBtn');
     startBtn.addEventListener('click', () => {
-      this.resetGame();      
+      this.resetGame();
       this.Update();
     });
-
   }
 
   resetGame() {
@@ -38,13 +64,7 @@ class Controller {
   }
 
   SetDirection(newDirection) {
-    // This is called by user input, but we might override it if AI is active
-    const useAI = document.getElementById('useAICheckBox').checked;
-    if (!useAI) {
-      // Only apply user direction if AI is not active
-      this._model.direction = newDirection;
-    }
-    // If AI is active, we ignore user input (or handle it differently).
+    this._model.direction = newDirection;
   }
 
   Update() {
@@ -58,13 +78,12 @@ class Controller {
       // If the game isn't over or won, move the model
       if (!this._model.gameOver && !this._model.gameWon) {
         // Check the "Use AI" state
-        const useAI = document.getElementById('useAICheckBox').checked;
+        this.useAi = document.getElementById('useAICheckBox').checked;
 
         // If AI is active, set direction from an AI routine (example placeholder)
-        if (useAI) {
-          // Instead of user direction, you'd call your AI logic:
-          //    let aiDirection = someAIlogic(this._model);
-          //    this._model.direction = aiDirection;
+        if (this.useAi) {
+          this.ai._vecteurEntree = this._model.aiInputVector();
+          this._model.direction = this.ai.computeOutput();
         }
 
         this._model.Move(this._fps);

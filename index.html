@@ -1,34 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Doodle Jump</title>
-  <link rel="stylesheet" href="front/style.css" />
-</head>
-<body>
-  <div id="game-container">
-    <div id="score">Score: 0</div>
-    <div id="level">Level: 1</div>
-    <canvas
-      id="my_canvas"
-      width="320"
-      height="480"
-      style="border: 2px solid black; background-color: white;"
-    ></canvas>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Doodle Jump</title>
+    <link rel="stylesheet" href="front/style.css" />
+  </head>
+  <body>
+    <div id="game-container">
+      <div id="score">Score: 0</div>
+      <div id="level">Level: 1</div>
+      <canvas
+        id="my_canvas"
+        width="320"
+        height="480"
+        style="border: 2px solid black; background-color: white"
+      ></canvas>
 
-    <div id="controls">
-      <button id="startGameBtn">Start Game</button>
-      <label>
-        <input type="checkbox" id="useAICheckBox" />
-        Use AI
-      </label>
+      <div id="controls">
+        <button id="startGameBtn">Start Game</button>
+        <label>
+          <input type="checkbox" id="useAICheckBox" />
+          Use AI
+        </label>
+      </div>
     </div>
-  </div>
 
-  <!-- Load scripts in order: model -> view -> controller -->
-  <script src="backend/model.js"></script>
-  <script src="backend/view.js"></script>
-  <script src="backend/controller.js"></script>
-</body>
+    <!-- Load scripts in order: model -> view -> controller -->
+    <script src="backend/model.js"></script>
+    <script src="backend/view.js"></script>
+    <script src="backend/AI.js"></script>
+    <script src="backend/controller.js"></script>
+  </body>
 </html>

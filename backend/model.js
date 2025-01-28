@@ -94,6 +94,34 @@ class FinishLine {
       this._highestReachedY = this._position.y;
     }
   
+  _getDistanceAndAngleBetweenDoodlePlateform(plateform) {
+    return [
+      Math.sqrt(
+        Math.pow(plateform.x - this._position.x, 2) +
+          Math.pow(plateform.y - this._position.y, 2)
+      ),
+      this._getAngleBetweenPointsInDegrees(
+        this._position.x,
+        this._position.y,
+        plateform.x,
+        plateform.y
+      ),
+    ];
+  }
+
+  _normalize(topDistances) {
+    let angles = [];
+    topDistances.forEach((distance) => {
+      angles.push(distance[1] / 180);
+    });
+    return angles;
+  }
+
+  _getAngleBetweenPointsInDegrees(x1, y1, x2, y2) {
+    const radians = Math.atan2(y2 - y1, x2 - x1); // Calcule l'angle en radians
+    return radians * (180 / Math.PI); // Convertit les radians en degrés
+  }
+
     get position() {
       return this._position;
     }
@@ -124,6 +152,27 @@ class FinishLine {
       this.b_Display = callback;
     }
   
+  BindAiState(variable) {
+    this.b_aiState = variable;
+  }
+
+  aiInputVector() {
+    let topDistances = [];
+
+    for (let platform of this._platforms) {
+      topDistances.push(
+        this._getDistanceAndAngleBetweenDoodlePlateform(platform)
+      );
+    }
+    topDistances = topDistances.sort((a, b) => a[0] - b[0]).slice(0, 4);
+    let angles = this._normalize(topDistances);
+    let platformsVector = angles;
+    platformsVector.push(this.position.x);
+    platformsVector.push(this.position.y);
+
+    return platformsVector;
+  }
+
     _generatePlatformType(level) {
       const random = Math.random();
       if (level <= 3) return Platform.TYPES.NORMAL;
