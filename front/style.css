@@ -1,30 +1,38 @@
 body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    background-color: #f0f0f0;
-    font-family: Arial, sans-serif;
-  }
-  
-  #game-container {
-    position: relative;
-  }
-  
-  #score,
-  #level {
-    position: absolute;
-    top: 10px;
-    font-size: 18px;
-    color: #333;
-  }
-  
-  #score {
-    left: 10px;
-  }
-  
-  #level {
-    right: 10px;
-  }
-  
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+  background-color: #f0f0f0;
+  font-family: Arial, sans-serif;
+}
+
+#game-container {
+  position: relative;
+}
+
+/* Score & Level remain absolutely positioned at the top */
+#score,
+#level {
+  position: absolute;
+  top: 10px;
+  font-size: 18px;
+  color: #333;
+}
+
+#score {
+  left: 10px;
+}
+
+#level {
+  right: 10px;
+}
+
+/* Controls div will naturally appear under the canvas */
+#controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 10px;
+}
