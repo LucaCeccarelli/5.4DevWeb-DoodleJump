@@ -12,16 +12,6 @@ class AI {
     this.inputVector = null;
   }
 
-  // Setter for inputVector
-  set inputVector(vector) {
-    this.inputVector = vector;
-  }
-
-  // Getter for inputVector
-  get inputVector() {
-    return this.inputVector;
-  }
-
   // Method to normalize the output
   normalize(outputVector) {
     let max = Math.max(...outputVector);
