@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
     <title>Doodle Jump</title>
     <link rel="stylesheet" href="front/style.css" />
   </head>
@@ -24,12 +24,23 @@
           Use AI
         </label>
       </div>
+
+      <div>
+        <button id="trainAiBtn">Train AI</button>
+      </div>
     </div>
 
-    <!-- Load scripts in order: model -> view -> controller -->
     <script src="backend/model.js"></script>
     <script src="backend/view.js"></script>
     <script src="backend/AI.js"></script>
     <script src="backend/controller.js"></script>
+
+    <script>
+      const app = new Controller(new Model(), new View("my_canvas"));
+
+      document.getElementById('trainAiBtn').addEventListener('click', () => {
+        window.location.href = 'train.html';
+      });
+    </script>
   </body>
 </html>

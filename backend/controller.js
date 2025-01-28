@@ -39,16 +39,18 @@ class Controller {
     this._view.BindGetDirection(this.GetDirection.bind(this));
 
     const startBtn = document.getElementById('startGameBtn');
-    startBtn.addEventListener('click', () => {
-      this.resetGame();
-      this.Update();
-    });
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        this.resetGame();
+        this.Update();
+      });
+    }
   }
 
   resetGame() {
     // Create a brand new Model & View
     this._model = new Model();
-    this._view = new View();
+    this._view = new View("my_canvas");
 
     // Re-bind the display and direction events
     this._model.BindDisplay(this.Display.bind(this));
@@ -83,7 +85,10 @@ class Controller {
       // If the game isn't over or won, move the model
       if (!this._model.gameOver && !this._model.gameWon) {
         // Check the "Use AI" state
-        this.useAi = document.getElementById('useAICheckBox').checked;
+        const aiCheckbox = document.getElementById('useAICheckBox');
+        if (aiCheckbox){
+          this.useAi = aiCheckbox.checked; 
+        } 
 
         // If AI is active, set direction from an AI routine (example placeholder)
         if (this.useAi) {
@@ -99,5 +104,3 @@ class Controller {
     requestAnimationFrame(this.Update.bind(this));
   }
 }
-
-const app = new Controller(new Model(), new View());

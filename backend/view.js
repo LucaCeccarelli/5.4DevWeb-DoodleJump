@@ -1,6 +1,6 @@
 class View {
-  constructor() {
-    this._canvas = document.getElementById('my_canvas');
+  constructor(canvas_id) { 
+    this._canvas = document.getElementById(canvas_id);
     this.ctx = this._canvas.getContext('2d');
     this._scoreElement = document.getElementById('score');
     this._levelElement = document.getElementById('level');
