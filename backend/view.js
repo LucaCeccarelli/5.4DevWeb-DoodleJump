@@ -1,9 +1,10 @@
 class View {
-  constructor(canvas_id) { 
+  constructor(canvas_id, isTrainingMode = false) { 
     this._canvas = document.getElementById(canvas_id);
     this.ctx = this._canvas.getContext('2d');
-    this._scoreElement = document.getElementById('score');
-    this._levelElement = document.getElementById('level');
+    this._scoreElement = !isTrainingMode ? document.getElementById('score') : null;
+    this._levelElement = !isTrainingMode ? document.getElementById('level') : null;
+    this.isTrainingMode = isTrainingMode;
 
     // Background loading
     this._backgroundImage = new Image();
@@ -20,16 +21,21 @@ class View {
     this._platformSpritesheet = new Image();
     this._platformSpritesheet.src = './sprites/game-tiles.png';
 
-    // Finish line sprite
-    this._finishLineSprite = new Image();
-    this._finishLineSprite.src = './sprites/game-tiles.png';
+    // Finish line sprite (only for regular game mode)
+    if (!isTrainingMode) {
+      this._finishLineSprite = new Image();
+      this._finishLineSprite.src = './sprites/game-tiles.png';
+    }
 
-    // Current sprite direction , different from direction because it's for the view
+    // Current sprite direction
     this._currentDirection = 0;
     this._hold_right = false;
     this._hold_left = false;
 
-    this.Events();
+    // Only set up keyboard events for regular game mode
+    if (!isTrainingMode) {
+      this.Events();
+    }
   }
 
   BindSetDirection(callback) {
@@ -75,7 +81,7 @@ class View {
   }
 
   Display(model) {
-    let { position, platforms, score, level, gameOver } = model;
+    let { position, platforms, score, level, gameOver, gameWon } = model;
     this.ctx.clearRect(0, 0, this._canvas.width, this._canvas.height);
 
     // Draw background image
@@ -89,15 +95,16 @@ class View {
       );
     }
 
-    // Update score and level
-    this._scoreElement.textContent = `Score: ${score}`;
-    this._levelElement.textContent = `Level: ${level}`;
+    // Update score and level (only in regular game mode)
+    if (!this.isTrainingMode && this._scoreElement && this._levelElement) {
+      this._scoreElement.textContent = `Score: ${score}`;
+      this._levelElement.textContent = `Level: ${level}`;
+    }
 
     // Draw platforms using sprites
     for (let platform of platforms) {
       if (this._platformSpritesheet.complete) {
         const coords = Platform.SPRITE_COORDS[platform.type];
-
         this.ctx.drawImage(
           this._platformSpritesheet, // Spritesheet image
           coords[0], // Source X
@@ -114,10 +121,10 @@ class View {
 
     // Draw player sprite based on direction
     let currentSprite;
-    if (this.b_GetDirection() < 0) {
+    const direction = this.b_GetDirection ? this.b_GetDirection() : 0;
+    
+    if (direction < 0) {
       currentSprite = this._doodleLeftSprite;
-    } else if (this.b_GetDirection() > 0) {
-      currentSprite = this._doodleRightSprite;
     } else {
       currentSprite = this._doodleRightSprite;
     }
@@ -127,13 +134,13 @@ class View {
         currentSprite,
         position.x,
         position.y,
-        50, // Adjust width
-        50 // Adjust height
+        50,
+        50
       );
     }
 
-    // Draw finish line
-    if (model._finishLine && this._finishLineSprite.complete) {
+    // Draw finish line (only in regular game mode)
+    if (!this.isTrainingMode && model._finishLine && this._finishLineSprite.complete) {
       this.ctx.drawImage(
         this._finishLineSprite,
         579,
@@ -142,38 +149,13 @@ class View {
         182,
         model._finishLine.x,
         model._finishLine.y,
-        model._finishLine.width, // 321
-        model._finishLine.height // 182
+        model._finishLine.width,
+        model._finishLine.height
       );
     }
 
-    // Game over screen
-    if (gameOver) {
-      this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
-      this.ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
-
-      this.ctx.font = '30px Arial';
-      this.ctx.textAlign = 'center';
-      this.ctx.fillText(
-        'Game Over',
-        this._canvas.width / 2,
-        this._canvas.height / 2
-      );
-      this.ctx.font = '20px Arial';
-      this.ctx.fillText(
-        `Score: ${score}`,
-        this._canvas.width / 2,
-        this._canvas.height / 2 + 40
-      );
-      this.ctx.fillText(
-        `Level: ${level}`,
-        this._canvas.width / 2,
-        this._canvas.height / 2 + 70
-      );
-    }
-
-    // Game won screen
-    if (model.gameWon) {
+    // Game over screen (only in regular game mode)
+    if (!this.isTrainingMode && (gameOver || gameWon)) {
       this.ctx.fillStyle = 'rgba(0,0,0,0.5)';
       this.ctx.fillRect(0, 0, this._canvas.width, this._canvas.height);
 
@@ -181,7 +163,7 @@ class View {
       this.ctx.font = '30px Arial';
       this.ctx.textAlign = 'center';
       this.ctx.fillText(
-        'You Win!',
+        gameWon ? 'You Win!' : 'Game Over',
         this._canvas.width / 2,
         this._canvas.height / 2
       );
@@ -192,6 +174,14 @@ class View {
         this._canvas.width / 2,
         this._canvas.height / 2 + 40
       );
+      
+      if (!gameWon) {
+        this.ctx.fillText(
+          `Level: ${level}`,
+          this._canvas.width / 2,
+          this._canvas.height / 2 + 70
+        );
+      }
     }
   }
 }
