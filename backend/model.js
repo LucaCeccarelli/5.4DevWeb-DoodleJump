@@ -121,8 +121,8 @@ class Model {
   }
 
   _getAngleBetweenPointsInDegrees(x1, y1, x2, y2) {
-    const radians = Math.atan2(y2 - y1, x2 - x1); // Calcule l'angle en radians
-    return radians * (180 / Math.PI); // Convertit les radians en degrés
+    const radians = Math.atan2(y2 - y1, x2 - x1);
+    return radians * (180 / Math.PI); 
   }
 
   get position() {
@@ -153,10 +153,6 @@ class Model {
 
   BindDisplay(callback) {
     this.b_Display = callback;
-  }
-
-  BindAiState(variable) {
-    this.b_aiState = variable;
   }
 
   aiInputVector() {

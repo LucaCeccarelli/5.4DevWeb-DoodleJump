@@ -35,7 +35,6 @@ class Controller {
     );
 
     this._model.BindDisplay(this.Display.bind(this));
-    this._model.BindAiState(this.useAi);
     this._view.BindSetDirection(this.SetDirection.bind(this));
 
     const startBtn = document.getElementById('startGameBtn');
@@ -82,7 +81,7 @@ class Controller {
 
         // If AI is active, set direction from an AI routine (example placeholder)
         if (this.useAi) {
-          this.ai._vecteurEntree = this._model.aiInputVector();
+          this.ai.inputVector = this._model.aiInputVector();
           this._model.direction = this.ai.computeOutput();
         }
 
