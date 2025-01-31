@@ -1,6 +1,6 @@
 class AITrainer {
     constructor() {
-        this.NUM_GAMES = 20;
+        this.NUM_GAMES = 50;
         this.MUTATION_RATE = 0.1;
         this.MUTATION_RANGE = 0.2;
         this.generation = 0;
@@ -60,6 +60,28 @@ class AITrainer {
                 noScoreIncreaseCounter: 0
             });
         }
+    }
+
+    logTopAIs() {
+        // Sort games by score in descending order
+        const sortedGames = [...this.games].sort((a, b) => b.score - a.score);
+
+        // Get the top 5 AIs
+        const topAIs = sortedGames.slice(0, 5).map((game, index) => ({
+            inputBiasVector: game.ai.inputBiasVector,
+            weightMatrix: game.ai.weightMatrix,
+            outputWeightMatrix: game.ai.outputWeightMatrix,
+            outputBiasVector: game.ai.outputBiasVector
+        }));
+
+        // Create the JSON structure
+        const aiData = {
+            generation: this.generation,
+            topAIs: topAIs
+        };
+
+        // Log the JSON object
+        console.log(JSON.stringify(aiData, null, 2));
     }
     
     stopTraining() {
@@ -166,6 +188,7 @@ class AITrainer {
         
         // If all games finished, evolve and start next generation
         if (allGamesDone) {
+            this.logTopAIs();
             this.evolveAIs();
             setTimeout(() => this.startTraining(), 1000);
         } else {
