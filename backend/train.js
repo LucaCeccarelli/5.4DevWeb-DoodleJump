@@ -196,14 +196,14 @@ class AITrainer {
                     }
                 }
                 
-                totalScore += game.score;
                 activeGames++;
                 allGamesDone = false;
             }
+            totalScore += game.score;
         });
         
         // Compute average score across active games
-        const averageScore = activeGames > 0 ? Math.round(totalScore / activeGames) : 0;
+        const averageScore = activeGames > 0 ? Math.round(totalScore / this.NUM_GAMES) : 0;
         document.getElementById('averageScore').textContent = averageScore;
         
         // Update best score
