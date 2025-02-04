@@ -1,0 +1,79 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    margin: 0;
+    min-height: 100vh;
+  }
+
+  .header {
+    background: #f0f0f0;
+    padding: 10px;
+    width: 100%;
+    z-index: 100;
+    text-align: center; /* Centers header content */
+  }
+
+  .controls {
+    margin: 20px 0;
+  }
+  
+  .controls button {
+    padding: 10px 20px;
+    margin: 0 10px;
+    font-size: 16px;
+    cursor: pointer;
+  }
+  
+  .stats {
+    margin: 20px auto;   /* Auto margins center the stats container */
+    padding: 15px;
+    background: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    width: 300px;
+    text-align: center;
+  }
+  
+  /* Center the chart container */
+  #chartContainer {
+    width: 600px;
+    max-width: 95%;
+    margin: 20px auto;  /* Centers the chart container */
+  }
+
+  /* Center the games container and its grid items */
+  .games-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 10px;
+    margin: 20px auto;  /* Auto margins center the container */
+    width: 95%;
+    max-width: 1200px;
+    justify-items: center; /* Center items within the grid cells */
+  }
+  
+  .game-wrapper {
+    position: relative;
+    aspect-ratio: 2/3;
+  }
+  
+  .game-stats {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+  }
+  
+  canvas {
+    border: 1px solid #ccc;
+    background-color: white;
+    width: 100%;
+    height: 100%;
+  }
