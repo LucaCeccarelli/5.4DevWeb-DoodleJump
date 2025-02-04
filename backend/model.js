@@ -86,6 +86,7 @@ class Model {
     this._score = 0;
     this._level = 1;
     this._platforms = this._generateInitialPlatform();
+    this.lastPlatformTouchedPlatform = this._platforms[0];
 
     const finishLineY = -10800;
     const finishLineX = 0;
@@ -292,6 +293,8 @@ class Model {
       platform.update(Model.PLATFORM_SPEED / fps)
     );
 
+    this.lastPlatformTouchedPlatform.update(Model.PLATFORM_SPEED / fps);
+    
     // Check platform collisions
     for (let platform of this._platforms) {
       if (
@@ -301,6 +304,7 @@ class Model {
         this._position.y + this._hitbox.height < platform.y + 10 &&
         this._gravitySpeed > 0
       ) {
+        this.lastPlatformTouchedPlatform = platform;
         switch (platform.type) {
           case Platform.TYPES.DISAPPEARING:
             if (!platform.touched) {
