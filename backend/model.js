@@ -292,8 +292,6 @@ class Model {
     this._platforms.forEach((platform) =>
       platform.update(Model.PLATFORM_SPEED / fps)
     );
-
-    this.lastPlatformTouchedPlatform.update(Model.PLATFORM_SPEED / fps);
     
     // Check platform collisions
     for (let platform of this._platforms) {
